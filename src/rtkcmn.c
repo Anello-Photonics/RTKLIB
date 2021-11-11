@@ -147,7 +147,7 @@
 #include <stdarg.h>
 #include <ctype.h>
 #include <errno.h>
-#ifndef WIN32
+#ifndef _WIN32
 #include <dirent.h>
 #include <time.h>
 #include <sys/time.h>
@@ -1585,7 +1585,7 @@ extern gtime_t timeget(void)
 {
     gtime_t time;
     double ep[6]={0};
-#ifdef WIN32
+#ifdef _WIN32
     SYSTEMTIME ts;
     
     GetSystemTime(&ts); /* utc */
@@ -1847,7 +1847,7 @@ extern int adjgpsweek(int week)
 *-----------------------------------------------------------------------------*/
 extern uint32_t tickget(void)
 {
-#ifdef WIN32
+#ifdef _WIN32
     return (uint32_t)timeGetTime();
 #else
     struct timespec tp={0};
@@ -1875,7 +1875,7 @@ extern uint32_t tickget(void)
 *-----------------------------------------------------------------------------*/
 extern void sleepms(int ms)
 {
-#ifdef WIN32
+#ifdef _WIN32
     if (ms<5) Sleep(1); else Sleep(ms);
 #else
     struct timespec ts;
@@ -3079,7 +3079,15 @@ extern void tracelevel(int level)
 extern void trace(int level, const char *format, ...)
 {
     va_list ap;
-    
+#if 0//def _WIN32
+    if (level <= 4)
+    {
+        char buff[1024] = { 0 }, * p = 0;
+        printf("%d ", level);
+        va_start(ap, format); vsprintf(buff, format, ap); va_end(ap);
+        printf("%s", buff);
+    }
+#endif
     /* print error message to stderr */
     if (level<=1) {
         va_start(ap,format); vfprintf(stderr,format,ap); va_end(ap);
@@ -3237,7 +3245,7 @@ extern void traceb  (int level, const uint8_t *p, int n) {}
 *-----------------------------------------------------------------------------*/
 extern int execcmd(const char *cmd)
 {
-#ifdef WIN32
+#ifdef _WIN32
     PROCESS_INFORMATION info;
     STARTUPINFO si={0};
     DWORD stat;
@@ -3272,7 +3280,7 @@ extern int expath(const char *path, char *paths[], int nmax)
 {
     int i,j,n=0;
     char tmp[1024];
-#ifdef WIN32
+#ifdef _WIN32
     WIN32_FIND_DATA file;
     HANDLE h;
     char dir[1024]="",*p;
@@ -3337,7 +3345,7 @@ static int mkdir_r(const char *dir)
 {
     char pdir[1024],*p;
 
-#ifdef WIN32
+#ifdef _WIN32
     HANDLE h;
     WIN32_FIND_DATA data;
     
@@ -3985,7 +3993,7 @@ extern int rtk_uncompress(const char *file, char *uncfile)
         strcpy(uncfile,tmpfile); uncfile[p-tmpfile]='\0';
         strcpy(buff,tmpfile);
         fname=buff;
-#ifdef WIN32
+#ifdef _WIN32
         if ((p=strrchr(buff,'\\'))) {
             *p='\0'; dir=fname; fname=p+1;
         }
