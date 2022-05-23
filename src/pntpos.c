@@ -276,7 +276,44 @@ static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
         
         /* geometric distance */
         if ((r=geodist(rs+i*6,rr,e))<=0.0) continue;
+
+#if 1
+        static FILE* fOBS = NULL;
+        if (iter == 0)
+        {
+            if (!fOBS)
+            {
+                fOBS = fopen("obs.csv", "w");
+            }
+            if (fOBS)
+            {
+                obsd_t* obsd = obs + i;
+                int wk = 0;
+                double ws = time2gpst(obsd->time, &wk);
+                int prn = 0;
+                int sys = satsys(obsd->sat, &prn);
+                double* cur_rs = rs + i * 6;
+                double* cur_dts = dts + i * 2;
+                for (int f = 0; f < (NFREQ + NEXOBS); ++f)
+                {
+                    if (obsd->code[f] == 0) continue;
+                    double frq = sat2freq(obsd->sat, obsd->code[f], nav);
+                    fprintf(fOBS, "%i,%12.4f,%3i,%3i,%3i,%3i,%14.4f,%14.4f,%10.4f,%7.2f,%14.4f,%14.4f,%14.4f,%10.4f,%10.4f,%10.4f,%14.4f,%10.4f,%f\n"
+                        , obsd->rcv
+                        , ws /* 1 */
+                        , obsd->sat, sys, prn, obsd->code[f] /* 2,3,4,5 */
+                        , obsd->P[f], obsd->L[f], obsd->D[f], obsd->SNR[f] * SNR_UNIT /* 6,7,8,9 */
+                        , cur_rs[0], cur_rs[1], cur_rs[2], cur_rs[3], cur_rs[4], cur_rs[5] /* 10,11,12,13,14,15 */
+                        , cur_dts[0] * CLIGHT, cur_dts[1] * CLIGHT
+                        , frq
+                    );
+                }
+                fflush(fOBS);
+            }
+        }
+#endif
         
+        dion=vion=dtrp=vtrp=0;
         if (iter>0) {
             /* test elevation mask */
             if (satazel(pos,e,azel+i*2)<opt->elmin) continue;
@@ -336,10 +373,10 @@ static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
 }
 /* validate solution ---------------------------------------------------------*/
 static int valsol(const double *azel, const int *vsat, int n,
-                  const prcopt_t *opt, const double *v, int nv, int nx,
+                  const prcopt_t *opt, const double *v, int nv, int nx, double *dop,
                   char *msg)
 {
-    double azels[MAXOBS*2],dop[4],vv;
+    double azels[MAXOBS*2],vv;
     int i,ns;
     
     trace(3,"valsol  : n=%d nv=%d\n",n,nv);
@@ -418,9 +455,10 @@ static int estpos(const obsd_t *obs, int n, const double *rs, const double *dts,
             sol->qr[5]=(float)Q[2];    /* cov zx */
             sol->ns=(uint8_t)ns;
             sol->age=sol->ratio=0.0;
+            sol->refvar=sqrt(dot(v,v,nv)/nv);
             
             /* validate solution */
-            if ((stat=valsol(azel,vsat,n,opt,v,nv,NX,msg))) {
+            if ((stat=valsol(azel,vsat,n,opt,v,nv,NX,sol->dop,msg))) {
                 sol->stat=opt->sateph==EPHOPT_SBAS?SOLQ_SBAS:SOLQ_SINGLE;
             }
             free(v); free(H); free(var);
@@ -592,6 +630,47 @@ static void estvel(const obsd_t *obs, int n, const double *rs, const double *dts
     }
     free(v); free(H);
 }
+
+static void deg2dms(double deg, float* dms)
+{
+    float sign = deg < 0.0 ? (-1.0f) : (1.0f);
+    double a = fabs(deg);
+    dms[0] = (float)floor(a); a = (a - dms[0]) * 60.0;
+    dms[1] = (float)floor(a); a = (a - dms[1]) * 60.0;
+    dms[2] = (float)a; dms[0] *= sign;
+}
+
+extern int print_nmea_gga(unsigned char* buff, float time, int type, double lat, double lon, float ht, int ns, float dop, float age)
+{
+    float h, ep[6] = { 0 }, dms1[3] = { 0 }, dms2[3] = { 0 };
+    char* p = (char*)buff, * q, sum;
+
+    if (type != 1 && type != 4 && type != 5) {
+        p += sprintf(p, "$GPGGA,,,,,,,,,,,,,,");
+        for (q = (char*)buff + 1, sum = 0; *q; q++) sum ^= *q;
+        p += sprintf(p, "*%02X%c%c", sum, 0x0D, 0x0A);
+        return (int)(p - (char*)buff);
+    }
+    time -= 18.0;
+    ep[2] = floorf(time / (24 * 3600));
+    time -= (ep[2] * 24 * 3600);
+    ep[3] = floorf(time / 3600);
+    time -= (ep[3] * 3600);
+    ep[4] = floorf(time / 60);
+    time -= (ep[4] * 60);
+    ep[5] = time;
+    h = 0.0;
+    deg2dms(fabs(lat), dms1);
+    deg2dms(fabs(lon), dms2);
+    p += sprintf(p, "$GPGGA,%02.0f%02.0f%05.2f,%02.0f%010.7f,%s,%03.0f%010.7f,%s,%d,%02d,%.1f,%.3f,M,%.3f,M,%.1f,",
+        ep[3], ep[4], ep[5], dms1[0], dms1[1] + dms1[2] / 60.0, lat >= 0 ? "N" : "S",
+        dms2[0], dms2[1] + dms2[2] / 60.0, lon >= 0 ? "E" : "W", type,
+        ns, dop, ht - h, h, age);
+    for (q = (char*)buff + 1, sum = 0; *q; q++) sum ^= *q; /* check-sum */
+    p += sprintf(p, "*%02X%c%c", sum, 0x0D, 0x0A);
+    return (int)(p - (char*)buff);
+}
+
 /* single-point positioning ----------------------------------------------------
 * compute receiver position, velocity, clock bias by single-point positioning
 * with pseudorange and doppler observables
@@ -643,6 +722,53 @@ extern int pntpos(const obsd_t *obs, int n, const nav_t *nav,
     /* estimate receiver velocity with Doppler */
     if (stat) {
         estvel(obs,n,rs,dts,nav,&opt_,sol,azel_,vsat);
+#if 1
+        static FILE* fSOL = NULL;
+        static FILE* fGGA = NULL;
+        if (!fSOL) fSOL = fopen("sol.csv", "w");
+        if (!fGGA) fGGA = fopen("gga.nmea", "w");
+        if (sol->refvar > 0)
+        {
+            int wk = 0;
+            double ws = time2gpst(sol->time, &wk);
+            double blh[3] = { 0 };
+            ecef2pos(sol->rr, blh);
+
+            double lat = blh[0], lon = blh[1];
+            double C_en[3][3] = { 0 };
+            C_en[0][0] = -sin(lat) * cos(lon);
+            C_en[1][0] = -sin(lat) * sin(lon);
+            C_en[2][0] = cos(lat);
+            C_en[0][1] = -sin(lon);
+            C_en[1][1] = cos(lon);
+            C_en[2][1] = 0.0;
+            C_en[0][2] = -cos(lat) * cos(lon);
+            C_en[1][2] = -cos(lat) * sin(lon);
+            C_en[2][2] = -sin(lat);
+
+            double* vxyz = sol->rr + 3;
+            double vn = C_en[0][0] * vxyz[0] + C_en[1][0] * vxyz[1] + C_en[2][0] * vxyz[2];
+            double ve = C_en[0][1] * vxyz[0] + C_en[1][1] * vxyz[1] + C_en[2][1] * vxyz[2];
+            double vd = C_en[0][2] * vxyz[0] + C_en[1][2] * vxyz[1] + C_en[2][2] * vxyz[2];
+
+            if (fSOL)
+            {
+                fprintf(fSOL, "%14.7f,%14.9f,%14.9f,%10.4f,%10.4f,%10.4f,%10.4f,%7.2f,%7.2f,%7.2f,%7.2f,%7.2f,%i\n", ws
+                    , blh[0] * R2D, blh[1] * R2D, blh[2]
+                    , vn, ve, vd
+                    , sol->refvar, sqrt(sol->qr[0]), sqrt(sol->qr[1]), sqrt(sol->qr[2])
+                    , sol->dop[1], sol->ns);
+                fflush(fSOL);
+            }
+            if (fGGA)
+            {
+                char buffer[255] = { 0 };
+                print_nmea_gga((uint8_t*)buffer, ws, 1, blh[0] * R2D, blh[1] * R2D, blh[2], sol->ns, sol->dop[1], 0.0);
+                fprintf(fGGA, "%s", buffer);
+                fflush(fGGA);
+            }
+        }
+#endif
     }
     if (azel) {
         for (i=0;i<n*2;i++) azel[i]=azel_[i];
