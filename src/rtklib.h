@@ -155,7 +155,8 @@ extern "C" {
 #endif
 #ifdef ENAGAL
 #define MINPRNGAL   1                   /* min satellite PRN number of Galileo */
-#define MAXPRNGAL   36                  /* max satellite PRN number of Galileo */
+/* increase to accomodate new galileo launch recently (2022) */
+#define MAXPRNGAL   40                  /* max satellite PRN number of Galileo */ 
 #define NSATGAL    (MAXPRNGAL-MINPRNGAL+1) /* number of Galileo satellites */
 #define NSYSGAL     1
 #else
