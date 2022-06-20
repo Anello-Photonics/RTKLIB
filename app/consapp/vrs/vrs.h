@@ -11,6 +11,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include <time.h>
 
 #ifdef WIN_DLL
 #define EXPORT __declspec(dllexport) /* for Windows DLL */
@@ -214,6 +215,7 @@ extern "C" {
 
 #define P2_5        0.03125             /* 2^-5 */
 #define P2_6        0.015625            /* 2^-6 */
+#define P2_10       0.0009765625          /* 2^-10 */
 #define P2_11       4.882812500000000E-04 /* 2^-11 */
 #define P2_15       3.051757812500000E-05 /* 2^-15 */
 #define P2_17       7.629394531250000E-06 /* 2^-17 */
@@ -223,19 +225,26 @@ extern "C" {
 #define P2_23       1.192092895507810E-07 /* 2^-23 */
 #define P2_24       5.960464477539063E-08 /* 2^-24 */
 #define P2_27       7.450580596923828E-09 /* 2^-27 */
+#define P2_28       3.725290298461914E-09 /* 2^-28 */
 #define P2_29       1.862645149230957E-09 /* 2^-29 */
 #define P2_30       9.313225746154785E-10 /* 2^-30 */
 #define P2_31       4.656612873077393E-10 /* 2^-31 */
 #define P2_32       2.328306436538696E-10 /* 2^-32 */
 #define P2_33       1.164153218269348E-10 /* 2^-33 */
+#define P2_34       5.820766091346740E-11 /* 2^-34 */
 #define P2_35       2.910383045673370E-11 /* 2^-35 */
 #define P2_38       3.637978807091710E-12 /* 2^-38 */
 #define P2_39       1.818989403545856E-12 /* 2^-39 */
 #define P2_40       9.094947017729280E-13 /* 2^-40 */
+#define P2_41       4.547473508864641E-13 /* 2^-41 */
 #define P2_43       1.136868377216160E-13 /* 2^-43 */
+#define P2_46       1.421085471520200E-14 /* 2^-46 */
 #define P2_48       3.552713678800501E-15 /* 2^-48 */
 #define P2_50       8.881784197001252E-16 /* 2^-50 */
 #define P2_55       2.775557561562891E-17 /* 2^-55 */
+#define P2_59       1.734723475976810E-18 /* 2^-59 */
+#define P2_66       1.355252715606880E-20 /* 2^-66 */
+
 
 #define FREQ1       1.57542E9           /* L1/E1/B1C  frequency (Hz) */
 #define FREQ2       1.22760E9           /* L2         frequency (Hz) */
@@ -255,7 +264,19 @@ extern "C" {
 #define FREQ2_CMP   1.20714E9           /* BDS B2I/B2b frequency (Hz) */
 #define FREQ3_CMP   1.26852E9           /* BDS B3      frequency (Hz) */
 
+#define HION        350000.0            /* ionosphere height (m) */
+
 #define MAXFREQ     7                   /* max NFREQ */
+
+#define RTCM3PREAMB 0xD3        /* rtcm ver.3 frame preamble */
+
+#define SNR_UNIT    0.001               /* SNR unit (dBHz) */
+
+#define EPHOPT_BRDC 0                   /* ephemeris option: broadcast ephemeris */
+#define EPHOPT_PREC 1                   /* ephemeris option: precise ephemeris */
+#define EPHOPT_SBAS 2                   /* ephemeris option: broadcast + SBAS */
+#define EPHOPT_SSRAPC 3                 /* ephemeris option: broadcast + SSR_APC */
+#define EPHOPT_SSRCOM 4                 /* ephemeris option: broadcast + SSR_COM */
 
 /* type definitions ----------------------------------------------------------*/
 
@@ -363,7 +384,7 @@ typedef struct {        /* navigation data type */
     int nc, ncmax;       /* number of precise clock */
     int na, namax;       /* number of almanac data */
     int nt, ntmax;       /* number of tec grid data */
-    eph_t eph[MAXSAT];         /* GPS/QZS/GAL/BDS/IRN ephemeris */
+    eph_t eph[MAXSAT+NSATGAL];         /* GPS/QZS/GAL/BDS/IRN ephemeris */
     geph_t geph[NSATGLO];       /* GLONASS ephemeris */
     double utc_gps[8];  /* GPS delta-UTC parameters {A0,A1,Tot,WNt,dt_LS,WN_LSF,DN,dt_LSF} */
     double utc_glo[8];  /* GLONASS UTC time parameters {tau_C,tau_GPS} */
@@ -402,6 +423,9 @@ typedef struct {        /* station parameter type */
 } sta_t;
 
 typedef struct {        /* RTCM control struct type */
+    int type;
+    uint8_t sync;
+    uint8_t crc;
     int staid;          /* station id */
     int stah;           /* station health */
     int seqno;          /* sequence number for rtcm 2 or iods msm */
@@ -500,26 +524,18 @@ EXPORT double geodist(const double* rs, const double* rr, double* e);
 EXPORT void dops(int ns, const double* azel, double elmin, double* dop);
 
 /* atmosphere models ---------------------------------------------------------*/
-EXPORT double ionmodel(gtime_t t, const double* ion, const double* pos,
-    const double* azel);
+EXPORT double ionmodel(gtime_t t, const double* ion, const double* pos, const double* azel);
 EXPORT double ionmapf(const double* pos, const double* azel);
-EXPORT double ionppp(const double* pos, const double* azel, double re,
-    double hion, double* pppos);
-EXPORT double tropmodel(gtime_t time, const double* pos, const double* azel,
-    double humi);
-EXPORT double tropmapf(gtime_t time, const double* pos, const double* azel,
-    double* mapfw);
+EXPORT double ionppp(const double* pos, const double* azel, double re, double hion, double* pppos);
+EXPORT double tropmodel(gtime_t time, const double* pos, const double* azel, double humi);
+EXPORT double tropmapf(gtime_t time, const double* pos, const double* azel, double* mapfw);
 
 /* antenna models ------------------------------------------------------------*/
-EXPORT void antmodel(const pcv_t* pcv, const double* del, const double* azel,
-    int opt, double* dant);
+EXPORT void antmodel(const pcv_t* pcv, const double* del, const double* azel, int opt, double* dant);
 EXPORT void antmodel_s(const pcv_t* pcv, double nadir, double* dant);
 
 /* earth tide models ---------------------------------------------------------*/
-EXPORT void sunmoonpos(gtime_t tutc, const double* erpv, double* rsun,
-    double* rmoon, double* gmst);
-EXPORT void tidedisp(gtime_t tutc, const double* rr, int opt, const erp_t* erp,
-    const double* odisp, double* dr);
+EXPORT void sunmoonpos(gtime_t tutc, const double* erpv, double* rsun, double* rmoon, double* gmst);
 
 /* ephemeris and clock functions ---------------------------------------------*/
 EXPORT double eph2clk(gtime_t time, const eph_t* eph);
@@ -562,6 +578,8 @@ EXPORT int gen_rtcm3(rtcm_t* rtcm, int type, int subtype, int sync);
 EXPORT int lambda(int n, int m, const double* a, const double* Q, double* F, double* s);
 EXPORT int lambda_reduction(int n, const double* Q, double* Z);
 EXPORT int lambda_search(int n, int m, const double* a, const double* Q, double* F, double* s);
+
+EXPORT int input_rtcm3(rtcm_t* rtcm, uint8_t data);
 
 #ifdef __cplusplus
 }

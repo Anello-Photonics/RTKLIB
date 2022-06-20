@@ -19,18 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\src\convrnx.c" />
-    <ClCompile Include="..\..\..\src\ephemeris.c" />
-    <ClCompile Include="..\..\..\src\ionex.c" />
-    <ClCompile Include="..\..\..\src\pntpos.c" />
-    <ClCompile Include="..\..\..\src\preceph.c" />
-    <ClCompile Include="..\..\..\src\rinex.c" />
-    <ClCompile Include="..\..\..\src\rtcm.c" />
-    <ClCompile Include="..\..\..\src\rtcm2.c" />
-    <ClCompile Include="..\..\..\src\rtcm3.c" />
-    <ClCompile Include="..\..\..\src\rtcm3e.c" />
-    <ClCompile Include="..\..\..\src\rtkcmn.c" />
+    <ClCompile Include="ephemeris.c" />
     <ClCompile Include="vrs.c" />
+    <ClCompile Include="vrs_test.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="vrs.h" />
