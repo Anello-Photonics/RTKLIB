@@ -55,6 +55,36 @@ extern "C" {
 #define EXPORT
 #endif
 
+
+    /* set default GNSS setting */
+#ifndef ENAGLO
+#define ENAGLO
+#endif
+
+#ifndef ENAGAL
+#define ENAGAL
+#endif
+
+#ifndef ENACMP
+#define ENACMP
+#endif
+
+#ifndef ENAQZS
+#define ENAQZS
+#endif
+
+#ifndef NFREQ
+#define NFREQ 5
+#endif
+
+#ifndef NEXOBS
+#define NEXOBS 3
+#endif
+
+#ifndef MAXOBS
+#define MAXOBS 96
+#endif
+
 /* constants -----------------------------------------------------------------*/
 
 #define VER_RTKLIB  "2.4.3"             /* library version */
