@@ -3079,7 +3079,7 @@ extern void tracelevel(int level)
 extern void trace(int level, const char *format, ...)
 {
     va_list ap;
-#if 0//def _WIN32
+#if 0/*def _WIN32*/
     if (level <= 4)
     {
         char buff[1024] = { 0 }, * p = 0;

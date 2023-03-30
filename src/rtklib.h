@@ -468,7 +468,7 @@ extern "C" {
 #define STR_HTTP     8                  /* stream type: http */
 #define STR_NTRIPCAS 9                  /* stream type: NTRIP caster */
 #define STR_UDPSVR   10                 /* stream type: UDP server */
-#define STR_UDPCLI   11                 /* stream type: UDP server */
+#define STR_UDPCLI   11                 /* stream type: UDP client */
 #define STR_MEMBUF   12                 /* stream type: memory buffer */
 
 #define STRFMT_RTCM2 0                  /* stream format: RTCM 2 */

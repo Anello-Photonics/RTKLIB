@@ -167,6 +167,8 @@ static int decodepath(const char *path, int *type, char *strpath, int *fmt)
     if      (!strncmp(path,"serial",6)) *type=STR_SERIAL;
     else if (!strncmp(path,"tcpsvr",6)) *type=STR_TCPSVR;
     else if (!strncmp(path,"tcpcli",6)) *type=STR_TCPCLI;
+    else if (!strncmp(path,"udpsvr",6)) *type=STR_UDPSVR;
+    else if (!strncmp(path,"udpcli",6)) *type=STR_UDPCLI;
     else if (!strncmp(path,"ntripc",6)) *type=STR_NTRIPCAS;
     else if (!strncmp(path,"ntrips",6)) *type=STR_NTRIPSVR;
     else if (!strncmp(path,"ntrip", 5)) *type=STR_NTRIPCLI;

@@ -595,7 +595,7 @@ static void estvel(const obsd_t *obs, int n, const double *rs, const double *dts
     free(v); free(H);
 }
 
-static void deg2dms(double deg, float* dms)
+static void deg2dms_(double deg, float* dms)
 {
     float sign = deg < 0.0 ? (-1.0f) : (1.0f);
     double a = fabs(deg);
@@ -624,8 +624,8 @@ extern int print_nmea_gga(unsigned char* buff, float time, int type, double lat,
     time -= (ep[4] * 60);
     ep[5] = time;
     h = 0.0;
-    deg2dms(fabs(lat), dms1);
-    deg2dms(fabs(lon), dms2);
+    deg2dms_(fabs(lat), dms1);
+    deg2dms_(fabs(lon), dms2);
     p += sprintf(p, "$GPGGA,%02.0f%02.0f%05.2f,%02.0f%010.7f,%s,%03.0f%010.7f,%s,%d,%02d,%.1f,%.3f,M,%.3f,M,%.1f,",
         ep[3], ep[4], ep[5], dms1[0], dms1[1] + dms1[2] / 60.0, lat >= 0 ? "N" : "S",
         dms2[0], dms2[1] + dms2[2] / 60.0, lon >= 0 ? "E" : "W", type,
@@ -675,7 +675,7 @@ extern int pntpos(const obsd_t *obs, int n, const nav_t *nav,
     /* satellite positons, velocities and clocks */
     satposs(sol->time,obs,n,nav,opt_.sateph,rs,dts,var,svh);
     
-#if 1
+#if 0
     static FILE* fOBS = NULL;
     if (!fOBS)
     {
@@ -725,7 +725,7 @@ extern int pntpos(const obsd_t *obs, int n, const nav_t *nav,
     /* estimate receiver velocity with Doppler */
     if (stat) {
         estvel(obs,n,rs,dts,nav,&opt_,sol,azel_,vsat);
-#if 1
+#if 0
         static FILE* fSOL = NULL;
         static FILE* fGGA = NULL;
         if (!fSOL) fSOL = fopen("sol.csv", "w");
